@@ -1,6 +1,8 @@
-import fire
 import json
+
+import fire
 import prettytable
+
 
 def get_tag(state, tag):
     for x in state['summaries']:
@@ -9,7 +11,7 @@ def get_tag(state, tag):
 
 
 def main(path_a: str, path_b: str):
-    
+
     with open(path_a, 'r') as f:
         a = json.load(f)
     with open(path_b, 'r') as f:
@@ -38,7 +40,7 @@ def main(path_a: str, path_b: str):
         x = by_bs.get(bs, [0, 0, 0])
         by_bs[bs] = x[0] + 1, x[1] + flops, x[2] + diff
         idx_4 = int(idx[4:]) % 4
-        x = by_idx_4.get(idx_4, [0,0,0])
+        x = by_idx_4.get(idx_4, [0, 0, 0])
         by_idx_4[idx_4] = x[0] + 1, x[1] + flops, x[2] + diff
 
     by_idx_tab = prettytable.PrettyTable(['idx', 'flops', 'diff'])
