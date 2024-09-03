@@ -34,3 +34,12 @@
 
 .cache
 /build
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+.vscode/
+
+# Distribution / packaging
+.eggs/
+wheels/
+*.egg-info/

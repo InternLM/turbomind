@@ -5,7 +5,7 @@ import sys
 from setuptools import find_packages, setup
 
 pwd = os.path.dirname(__file__)
-version_file = 'lmdeploy/version.py'
+version_file = 'turbomind/version.py'
 
 
 def readme():
