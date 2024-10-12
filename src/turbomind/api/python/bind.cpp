@@ -324,28 +324,6 @@ PYBIND11_MODULE(turbomind_kernels, m) {
             return ret;
         },
         "dl_managed_tensor"_a);
-    // m.def("convert_qweight", [](py::object qweight, int input_dims, int output_dims, bool simt) {
-    //     py::capsule      cap = qweight.attr("__dlpack__")();
-    //     DLManagedTensor* dlmt =
-    //         static_cast<DLManagedTensor*>(PyCapsule_GetPointer(cap.ptr(), kDlTensorCapsuleName));
-    //     auto _qweight = DLManagedTensorToTurbomindTensor(dlmt);
-    //     _qweight = convert_qweight(_qweight, input_dims, output_dims, simt);
-    //     return *_qweight;
-    // });
-    // m.def("convert_scales_zeros",
-    // [](py::object scales, py::object qzeros, py::object scales_zeros, int input_dims, int output_dims, int group_size, bool simt) {
-    //     auto cap_scales = scales.attr("__dlpack__")();
-    //     auto cap_zeros = qzeros.attr("__dlpack__")();
-    //     auto cap_scales_zeros = scales_zeros.attr("__dlpack__")();
-    //     auto dlmt_scales = static_cast<DLManagedTensor*>(PyCapsule_GetPointer(cap_scales.ptr(), kDlTensorCapsuleName));
-    //     auto dlmt_zeros = static_cast<DLManagedTensor*>(PyCapsule_GetPointer(cap_zeros.ptr(), kDlTensorCapsuleName));
-    //     auto dlmt_scales_zeros = static_cast<DLManagedTensor*>(PyCapsule_GetPointer(cap_scales_zeros.ptr(), kDlTensorCapsuleName));
-    //     auto _scales = DLManagedTensorToTurbomindTensor(dlmt_scales);
-    //     auto _zeros = DLManagedTensorToTurbomindTensor(dlmt_zeros);
-    //     auto _scales_zeros = DLManagedTensorToTurbomindTensor(dlmt_scales_zeros);
-    //     _scales_zeros = convert_scales_zeros(_scales, _zeros, _scales_zeros, input_dims, output_dims, group_size, simt);
-    //     return *_scales_zeros;
-    // });
 
     // Instantiate turbomind::Linear
     py::class_<turbomind::Linear, std::shared_ptr<turbomind::Linear>>(m, "Linear")

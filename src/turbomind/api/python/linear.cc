@@ -109,32 +109,14 @@ struct Linear::Impl {
                             stream_);
 
         if (ec) {
-            // TM_LOG_ERROR("%s: %d", __PRETTY_FUNCTION__, ec);
+            printf("%s: %d", __PRETTY_FUNCTION__, ec);
             std::abort();
         }
     }
     void convert_qweight(void* workspace, std::shared_ptr<Tensor> weight, size_t input_dims, size_t output_dims, bool use_simt) {
-        // const auto workspace_size = input_dims * output_dims * sizeof(uint16_t);
-        // void *workspace {};
-        // check_cuda_error(cudaMalloc((void**)&workspace, workspace_size));
-        // std::cout << "where: " << weight->where << ", type: " << weight->type << ", shape: ";
-        // for (size_t i = 0; i < weight->shape.size(); ++i) {
-        //     std::cout << weight->shape[i] << ", ";
-        // }
-        // std::cout << std::endl;
-        // std::vector<int> _temp(weight->shape[0] * weight->shape[1]);
-        // cudaMemcpy(_temp.data(), weight->data, _temp.size() * sizeof(int), cudaMemcpyDeviceToHost);
-        // int row = 4095;
-        // for (size_t i = 0; i < _temp.size() && i < 100; i++) {
-        //     std::cout << _temp[row * weight->shape[1] + i] << ", ";
-        // }
-        // cudaDeviceSynchronize();
-
         using namespace gemm;
         auto [order_b, pack_b, order_v, pack_v] = get_weight_and_scales_layout(getSMVersion(), use_simt);
 
-
-        // std::cout << "oder_b: " << int(order_b) << ", input_dims: " << input_dims << ", output_dims: " << output_dims << std::endl;
         if (order_b == kColMajor) {
             transpose_u4((uint4_t*)workspace, (const uint4_t*)weight->data, input_dims, output_dims);
             cudaMemcpy(const_cast<void*>(weight->data), workspace, input_dims * output_dims / 2, cudaMemcpyDefault);
