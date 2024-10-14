@@ -205,7 +205,7 @@ struct Linear::Impl {
 
         if constexpr (0) {
             std::cout << "zeros: " << std::endl;
-            std::vector<__half> tmp(input_dims / group_size * output_dims / 8);
+            std::vector<__half> tmp(input_dims / group_size * output_dims);
             cudaMemcpy(tmp.data(), qzeros->data, sizeof(__half) * tmp.size(), cudaMemcpyDefault);
             cudaDeviceSynchronize();
             int i = 0;
@@ -249,7 +249,7 @@ struct Linear::Impl {
 
         if constexpr (0) {
             std::vector<__half> tmp(scale_count * 2);
-            cudaMemcpy(tmp.data(), scales_zeros_, sizeof(__half) * tmp.size(), cudaMemcpyDefault);
+            cudaMemcpy(tmp.data(), workspace, sizeof(__half) * tmp.size(), cudaMemcpyDefault);
             cudaDeviceSynchronize();
             // for (const auto& x: tmp) {
             //     std::cout << (float)x << " ";
