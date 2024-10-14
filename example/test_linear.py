@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 from safetensors import safe_open
 
 import turbomind as tm
@@ -76,7 +77,7 @@ def makup_qzeros(in_features: int, out_features: int, group_size: int):
     return qzeros
 
 
-def makup_scales(in_features: int, out_featurse: int, group_size: int):
+def makup_scales(in_features: int, out_features: int, group_size: int):
     assert in_features % group_size == 0 and in_features // group_size >= 1
     scales = torch.rand((in_features // group_size, out_features),
                         dtype=torch.float16,
@@ -106,27 +107,15 @@ def dequantize(qweight, qzeros, scales, group_size: int = 128):
 #                       out_features=out_features,
 #                       group_size=group_size)
 # scales = makup_scales(in_features,
-#                       out_featurse=out_features,
+#                       out_features=out_features,
 #                       group_size=group_size)
-
-# weight = dequantize(qweight, qzeros, scales, group_size)
-# print(f'-- dequantization: weight.shape={weight.shape}, weight: \n{weight}')
-# ref_linear = nn.Linear(in_features, out_features, bias=False, device='cuda')
-# with torch.no_grad():
-#     ref_linear.weight = nn.Parameter(weight.T)
-
-# x = torch.randn(in_features, device=weight.device, dtype=weight.dtype)
-# print(f'input: {x}')
-# print(weight.device, x.device)
-# ref_res = ref_linear(x)
-# print(ref_res)
 
 
 def load_specified_linear_weights():
     ckpt_path = '/models/140/llama3/Meta-Llama-3-8B-Instruct-hf-AWQ/model-00001-of-00002.safetensors'  # noqa
     layer_id = 0
     # prefix = f'model.layers.{layer_id}.self_attn.q_proj.'
-    prefix = f'model.layers.{layer_id}.mlp.gate_proj.'
+    prefix = f'model.layers.{layer_id}.self_attn.o_proj.'
     keys = ['qweight', 'qzeros', 'scales']
     tensors = {}
     with safe_open(ckpt_path, framework='pt', device='cuda') as f:
@@ -144,6 +133,16 @@ group_size = 128
 in_features = qweight.shape[0]
 out_features = qweight.shape[1] * 8
 
+x = torch.randn(in_features, device=qweight.device, dtype=torch.float16)
+
+weight = dequantize(qweight, qzeros, scales, group_size)
+print(f'-- dequantization: weight.shape={weight.shape}, weight: \n{weight}')
+ref_linear = nn.Linear(in_features, out_features, bias=False, device='cuda')
+with torch.no_grad():
+    ref_linear.weight = nn.Parameter(weight.T)
+    ref_res = ref_linear(x)
+    print(f'nn.linear.res: {ref_res}')
+
 model = tm.Linear(in_features=in_features,
                   out_features=out_features,
                   bias=False,
@@ -157,7 +156,8 @@ model.scales = scales
 
 model.post_init()
 
-x = torch.randn(in_features, device=qweight.device, dtype=torch.float16)
 res = model(x)
-# max_diff = max(abs(ref_res - res))
-# ave_diff = sum(abs(ref_res - res)) / ref_res.numel()
+print(f'tm.linear.res: {res}')
+max_diff = torch.max(abs(ref_res - res))
+ave_diff = torch.sum(abs(ref_res - res)) / ref_res.numel()
+print(f'max_diff {max_diff}, ave_diff {ave_diff}')

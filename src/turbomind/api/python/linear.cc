@@ -8,6 +8,7 @@
 #include <fstream>
 #include <cuda_runtime.h>
 #include <iostream>
+#include <cuda_fp16.h>
 
 
 namespace turbomind {
@@ -50,6 +51,7 @@ struct Linear::Impl {
 
     void post_init(std::shared_ptr<Tensor> qweight, std::shared_ptr<Tensor> scales, std::shared_ptr<Tensor> qzeros,
                    bool simt) {
+        cudaDeviceSynchronize();
         const auto workspace_size = input_dims_ * output_dims_ * sizeof(uint16_t);
         void *workspace {};
         check_cuda_error(cudaMalloc((void**)&workspace, workspace_size));
@@ -184,6 +186,41 @@ struct Linear::Impl {
                             size_t output_dims,
                             int group_size,
                             bool use_simt) {
+        if constexpr (0) {
+            std::cout << "scales: " << std::endl;
+            std::vector<__half> tmp(input_dims / group_size * output_dims);
+            cudaMemcpy(tmp.data(), scales->data, sizeof(__half) * tmp.size(), cudaMemcpyDefault);
+            cudaDeviceSynchronize();
+            int i = 0;
+            for (auto it = tmp.begin(); i < 1000 && it != tmp.end(); ++it, ++i) {
+                std::cout << __half2float(*it) << " ";
+            }
+            std::cout << std::endl;
+            i = 0;
+            for (auto it = tmp.rbegin(); i < 1000 && it != tmp.rend(); ++it, ++i) {
+                std::cout << __half2float(*it) << " ";
+            }
+            std::cout << std::endl;
+        }
+
+        if constexpr (0) {
+            std::cout << "zeros: " << std::endl;
+            std::vector<__half> tmp(input_dims / group_size * output_dims / 8);
+            cudaMemcpy(tmp.data(), qzeros->data, sizeof(__half) * tmp.size(), cudaMemcpyDefault);
+            cudaDeviceSynchronize();
+            int i = 0;
+            for (auto it = tmp.begin(); i < 1000 && it != tmp.end(); ++it, ++i) {
+                std::cout << __half2float(*it) << " ";
+            }
+            std::cout << std::endl;
+            i = 0;
+            for (auto it = tmp.rbegin(); i < 1000 && it != tmp.rend(); ++it, ++i) {
+                std::cout << __half2float(*it) << " ";
+            }
+            std::cout << std::endl;
+        }
+
+
         const auto scale_count = input_dims / group_size * output_dims;
 
         using namespace gemm;
@@ -194,7 +231,7 @@ struct Linear::Impl {
 
         cudaDeviceSynchronize();
 
-        check_cuda_error(cudaMalloc((half**)&scales_zeros_, scale_count * 2));
+        check_cuda_error(cudaMalloc(&scales_zeros_, sizeof(uint16_t) * scale_count * 2));
 
         MatrixLayout s_desc{
             gemm::DataType::U32,
@@ -210,23 +247,24 @@ struct Linear::Impl {
         TM_CHECK(Convert(workspace, s_desc, scales_zeros_, q_desc_, 0) == 0);
         sync_check_cuda_error();
 
-        // if constexpr (0) {
-        //     std::vector<half> tmp(scale_count * 2);
-        //     cudaMemcpy(tmp.data(), scales_zeros_, sizeof(half) * tmp.size(), cudaMemcpyDefault);
-        //     cudaDeviceSynchronize();
-        //     // for (const auto& x: tmp) {
-        //     //     std::cout << (float)x << " ";
-        //     // }
-        //     int i = 0;
-        //     for (auto it = tmp.begin(); i < 1000 && it != tmp.end(); ++it, ++i) {
-        //         std::cout << std::hex << *it << " ";
-        //     }
-        //     i = 0;
-        //     std::cout << "\n";
-        //     for (auto it = tmp.rbegin(); i < 1000 && it != tmp.rend(); ++it, ++i) {
-        //         std::cout << std::hex << *it << " ";
-        //     }
-        // }
+        if constexpr (0) {
+            std::vector<__half> tmp(scale_count * 2);
+            cudaMemcpy(tmp.data(), scales_zeros_, sizeof(__half) * tmp.size(), cudaMemcpyDefault);
+            cudaDeviceSynchronize();
+            // for (const auto& x: tmp) {
+            //     std::cout << (float)x << " ";
+            // }
+            int i = 0;
+            for (auto it = tmp.begin(); i < 1000 && it != tmp.end(); ++it, ++i) {
+                std::cout << __half2float(*it) << " ";
+            }
+            std::cout << std::endl;
+            i = 0;
+            for (auto it = tmp.rbegin(); i < 1000 && it != tmp.rend(); ++it, ++i) {
+                std::cout << __half2float(*it) << " ";
+            }
+            std::cout << std::endl;
+        }
     }
 
 private:

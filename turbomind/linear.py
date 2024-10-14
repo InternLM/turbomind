@@ -153,6 +153,22 @@ class Linear(torch.nn.Module):
         self.qweight = self.qweight.contiguous()
         self.scales = self.scales.contiguous()
         self.qzeros = self.qzeros.contiguous()
+
+        # _list = self.scales.flatten().cpu().tolist()
+        # def print_formatted_float(a):
+        #     formatted_list = " ".join(f"{num:.8f}" for num in a)
+        #     print(formatted_list)
+        # print_formatted_float(_list[0:1000])
+        # print_formatted_float(_list[-1000:][::-1])
+
+        # def print_formatted_int(a):
+        #     formatted_list = ' '.join(f'{num:.0f}' for num in a)
+        #     print(formatted_list)
+
+        # _list = self.qzeros.flatten().cpu().tolist()
+        # print_formatted_int(_list[0:1000])
+        # print_formatted_int(_list[-1000:][::-1])
+
         self.linear.post_init(self.qweight, self.scales, self.qzeros, simt)
 
     @torch.no_grad()
@@ -173,7 +189,6 @@ class Linear(torch.nn.Module):
         )
         self.linear.forward(x, out)
         out = torch.from_dlpack(out)
-        print(out)
         return out.view(out_shape)
 
     def __call__(self, x: torch.Tensor):
