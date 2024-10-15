@@ -13,10 +13,10 @@ turbomind_dir = osp.split(turbomind.__file__)[0]
 sys.path.append(osp.join(turbomind_dir, 'lib'))
 
 try:
-    import turbomind_kernels
+    import _turbomind_ext
     TURBOMIND_KERNELS_INSTALLED = True
 except Exception as e:
-    logging.error(f'turbomind_kernels is not installed: {e}')
+    logging.error(f'_turbomind_ext is not installed: {e}')
     TURBOMIND_KERNELS_INSTALLED = False
 
 
@@ -111,9 +111,9 @@ class Linear(torch.nn.Module):
         # else:
         #     self.bias = None
 
-        self.linear = turbomind_kernels.Linear(self.in_features,
-                                               self.out_features, self.w_bit,
-                                               self.group_size)
+        self.linear = _turbomind_ext.Linear(self.in_features,
+                                            self.out_features, self.w_bit,
+                                            self.group_size)
 
     def post_init(self):
         assert self.qweight.device.type == 'cuda'

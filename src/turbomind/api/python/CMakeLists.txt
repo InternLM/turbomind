@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
 cmake_minimum_required(VERSION 3.8)
-project(turbomind_kernels)
+project(_turbomind_ext)
 
 find_package(pybind11 CONFIG)
 if(NOT pybind11_FOUND)

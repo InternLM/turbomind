@@ -150,7 +150,7 @@ link_directories(
 add_subdirectory(src/turbomind)
 
 # install python api
-install(TARGETS turbomind_kernels DESTINATION ${CMAKE_SOURCE_DIR}/turbomind/lib)
+install(TARGETS _turbomind_ext DESTINATION ${CMAKE_SOURCE_DIR}/turbomind/lib)
 
 
 if (MSVC)

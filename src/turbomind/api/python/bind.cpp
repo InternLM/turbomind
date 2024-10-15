@@ -14,7 +14,6 @@
 #include <numeric>
 
 namespace py = pybind11;
-// namespace tm = turbomind;
 using namespace pybind11::literals;
 
 static const char kDlTensorCapsuleName[] = "dltensor";
@@ -209,7 +208,7 @@ std::shared_ptr<turbomind::Tensor> TorchTensorToTurbomindTensor(py::object obj)
     return DLManagedTensorToTurbomindTensor(dlmt);
 }
 
-PYBIND11_MODULE(turbomind_kernels, m) {
+PYBIND11_MODULE(_turbomind_ext, m) {
     py::enum_<turbomind::WeightType>(m, "WeightType")
         .value("kFP32", turbomind::WeightType::kFP32)
         .value("kFP16", turbomind::WeightType::kFP16)
