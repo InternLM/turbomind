@@ -9,7 +9,6 @@
 #include <cuda_runtime.h>
 #include <iostream>
 #include <cuda_fp16.h>
-#include <optional>
 
 
 namespace turbomind {
@@ -273,7 +272,6 @@ struct Linear::Impl {
     }
 
 private:
-    // gemm::Gemm           gemm_;
     gemm::DispatchPolicy dispatch_policy_{gemm::DispatchPolicy::kDefault};
     gemm::Workspace      workspace_;
 

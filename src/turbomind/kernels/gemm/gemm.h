@@ -24,7 +24,7 @@ public:
     Gemm& operator=(const Gemm&) = delete;
 
     [[nodiscard]] int Run(const Operation&    operation,
-                          float               al1pha,
+                          float               alpha,
                           const void*         A,
                           const MatrixLayout& Adesc,
                           const void*         U,

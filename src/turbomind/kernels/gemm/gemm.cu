@@ -65,7 +65,7 @@ struct Gemm::Impl {
         }
         measurer_.emplace(CreateStoppingCriterion(tuning_.min_iter, tuning_.max_iter, tuning_.max_time));
     }
-    ~Impl() = default;
+
     // find launch spec in dispatch cache, dispatch by heuristic on cache miss
     LaunchSpec Dispatch(DispatchPolicy policy, GemmDesc desc, size_t barriers_size, size_t partials_size)
     {
