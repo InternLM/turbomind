@@ -33,10 +33,6 @@ def pad_in_dims(x: torch.Tensor, dims: int):
     return torch.nn.functional.pad(x, (0, 0, 0, pad), 'constant', 0)
 
 
-def to_cuda(x: torch.Tensor, *args):
-    return x.cuda()
-
-
 class Linear(torch.nn.Module):
 
     def __init__(self,
@@ -169,6 +165,23 @@ class Linear(torch.nn.Module):
         if self.bias is not None:
             out.add_(self.bias)
         return out.view(out_shape)
+
+    @classmethod
+    def from_linear(cls,
+                    nn_linear,
+                    w_bit,
+                    group_size,
+                    quant_method,
+                    init_only=False):
+        linear = cls(nn_linear.in_features,
+                     nn_linear.out_features,
+                     quant_method=quant_method,
+                     w_bit=w_bit,
+                     group_size=group_size)
+        if init_only:
+            return linear
+
+        raise NotImplementedError('Only inference is supported for turbomind')
 
     def __call__(self, x: torch.Tensor):
         return self.forward(x)
