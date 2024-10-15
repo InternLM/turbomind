@@ -58,14 +58,15 @@ def makeup_weights(in_features: int, out_features: int, group_size: int = 128):
 def dequantize(qweight, qzeros, scales, group_size: int = 128):
     _qweight = unpack_awq_gemm(qweight)
     _qzeros = unpack_awq_gemm(qzeros)
-    _qzeros = _qzeros.half()
-    weight = _qweight.clone().half()
+    _qzeros = _qzeros.float()
+    _qweight = _qweight.float()
+    _scales = scales.float()
     for i in range(qzeros.shape[0]):
         start = i * group_size
         end = start + group_size
-        weight[start:end] = (weight[start:end, :] -
-                             _qzeros[i:i + 1, :]) * scales[i:i + 1, :]
-    return weight
+        _qweight[start:end] = (_qweight[start:end, :] -
+                               _qzeros[i:i + 1, :]) * _scales[i:i + 1, :]
+    return _qweight.half()
 
 
 def load_specified_linear_weights():
