@@ -20,10 +20,6 @@ except Exception as e:
     TURBOMIND_KERNELS_INSTALLED = False
 
 
-def transpose(x):
-    return x.t() if x is not None else x
-
-
 def pad_out_dims(x: torch.Tensor, dims: int):
     pad = dims - x.size(-1)
     assert pad >= 0
@@ -118,9 +114,9 @@ class Linear(torch.nn.Module):
     def post_init(self):
         assert self.qweight.device.type == 'cuda'
         if self.quant_method == 'awq':
-            self.qweight = unpack_awq_gemm(self.qweight).t()
-            self.qzeros = unpack_awq_gemm(self.qzeros).t()
-            self.scales = self.scales.t()
+            self.qweight = unpack_awq_gemm(self.qweight)
+            self.qzeros = unpack_awq_gemm(self.qzeros)
+            self.scales = self.scales
         elif self.quant_method == 'gptq':
             xs = get_u4_slices(self.qweight, torch.uint8)
             self.qweight = torch.stack(xs, dim=1).view(-1,
@@ -128,15 +124,11 @@ class Linear(torch.nn.Module):
             xs = get_u4_slices(self.qzeros, torch.uint8)
             self.qzeros = torch.stack(xs, dim=-1).view(self.qzeros.size(0),
                                                        -1) + 1
-            self.qweight = self.qweight.t()
-            self.qzeros = self.qzeros.t()
-            self.scales = self.scales.t()
+            self.qweight = self.qweight
+            self.qzeros = self.qzeros
+            self.scales = self.scales
         else:
             return
-
-        self.qweight = transpose(self.qweight)
-        self.qzeros = transpose(self.qzeros)
-        self.scales = transpose(self.scales)
 
         self.qweight = pack_u4_row(self.qweight)
         self.qzeros = self.qzeros.to(torch.half)
@@ -153,22 +145,6 @@ class Linear(torch.nn.Module):
         self.qweight = self.qweight.contiguous()
         self.scales = self.scales.contiguous()
         self.qzeros = self.qzeros.contiguous()
-
-        # _list = self.scales.flatten().cpu().tolist()
-        # def print_formatted_float(a):
-        #     formatted_list = " ".join(f"{num:.8f}" for num in a)
-        #     print(formatted_list)
-        # print_formatted_float(_list[0:1000])
-        # print_formatted_float(_list[-1000:][::-1])
-
-        # def print_formatted_int(a):
-        #     formatted_list = ' '.join(f'{num:.0f}' for num in a)
-        #     print(formatted_list)
-
-        # _list = self.qzeros.flatten().cpu().tolist()
-        # print_formatted_int(_list[0:1000])
-        # print_formatted_int(_list[-1000:][::-1])
-
         self.linear.post_init(self.qweight, self.scales, self.qzeros, simt)
 
     @torch.no_grad()
