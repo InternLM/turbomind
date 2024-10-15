@@ -1,6 +1,6 @@
 import torch
+from modeling_turbomind import TurbomindForCausalLM
 from transformers import AutoTokenizer, TextStreamer
-from turbomind.modeling_turbomind import TurbomindForCausalLM
 
 quant_path = '/models/140/llama3/Meta-Llama-3-8B-Instruct-hf-AWQ'
 

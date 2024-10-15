@@ -6,14 +6,13 @@ import torch.nn as nn
 import transformers
 from accelerate.big_modeling import (init_empty_weights,
                                      load_checkpoint_and_dispatch)
+from module import get_named_linears, set_op_by_name
 from tqdm import tqdm
 from transformers import AutoConfig, PretrainedConfig, PreTrainedModel
 from typing_extensions import Annotated, Doc
 
 # from turbomind import Linear
 import turbomind
-
-from .module import get_named_linears, set_op_by_name
 
 
 class TurbomindForCausalLM(nn.Module):
