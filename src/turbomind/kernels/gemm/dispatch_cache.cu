@@ -11,6 +11,7 @@
 #include <ostream>
 #include <sstream>
 #include <vector>
+#include <mutex>
 
 static inline bool operator==(const int3& a, const int3& b)
 {
@@ -261,11 +262,13 @@ struct DispatchCache::Impl {
 
     const std::vector<Kernel*> kernels_;
     std::map<GemmDesc, Flat>   cache_;
+    mutable std::mutex mutex_;
 
     Impl(std::vector<Kernel*> kernels): kernels_(std::move(kernels)) {}
 
     std::optional<LaunchSpec> Find(GemmDesc desc, bool exact) const
     {
+        std::lock_guard<std::mutex> lock(mutex_);
         const int batch_size = extract_batch_size(desc);
         // std::cerr << batch_size << " " << desc.m << " " << desc.n << " " << desc.k << "\n";
         const auto it = cache_.find(desc);
@@ -286,6 +289,7 @@ struct DispatchCache::Impl {
 
     bool Insert(GemmDesc desc, const LaunchSpec& spec)
     {
+        std::lock_guard<std::mutex> lock(mutex_);
         const int batch_size = extract_batch_size(desc);
 
         auto it = cache_.find(desc);
@@ -310,6 +314,7 @@ struct DispatchCache::Impl {
 
     int Export(std::ostream& os) const
     {
+        std::lock_guard<std::mutex> lock(mutex_);
         std::vector<std::pair<GemmDesc, LaunchSpec>> entries;
         for (const auto& [desc, flat] : cache_) {
             auto tmp = desc;
@@ -325,6 +330,7 @@ struct DispatchCache::Impl {
 
     int Import(std::istream& is)
     {
+        std::lock_guard<std::mutex> lock(mutex_);
         std::vector<std::pair<GemmDesc, LaunchSpec>> entries;
         ImportDispatchCache(is, entries, kernels_);
         Summary(entries);
@@ -361,6 +367,7 @@ struct DispatchCache::Impl {
     // Print a summary of how many cases a kernel is used
     void Summary(const std::vector<std::pair<GemmDesc, LaunchSpec>>& entries) const
     {
+        std::lock_guard<std::mutex> lock(mutex_);
         std::vector<Kernel*> uses{nullptr};
         std::copy(kernels_.begin(), kernels_.end(), std::back_inserter(uses));
 

@@ -13,18 +13,25 @@
 
 namespace turbomind {
 
-class GemmSinglton {
+class GemmPool {
 public:
-    static GemmSinglton& getInstance() {
-        static GemmSinglton singleton;
+    static GemmPool& getInstance() {
+        static GemmPool singleton;
         return singleton;
     }
-private:
-    GemmSinglton() {
 
+    gemm::Gemm* get(int device_id) {
+        TM_CHECK(device_id < pool_.size());
+        return &pool_[device_id];
     }
-    // cublasMMWrapper*     cublas_wrapper_;
-    // gemm::Gemm           gemm_;
+    ~GemmPool() = default;
+private:
+    GemmPool() {
+        int device_count = 0;
+        check_cuda_error(cudaGetDeviceCount(&device_count));
+        pool_.resize(device_count);
+    }
+    std::vector<gemm::Gemm> pool_;
 };
 
 
@@ -89,8 +96,10 @@ struct Linear::Impl {
             (int)output_dims_, // col
             (int)output_dims_
         };
-
-        auto ec = gemm_.Run(operation,
+        int device_id;
+        check_cuda_error(cudaGetDevice(&device_id));
+        auto gemm = GemmPool::getInstance().get(device_id);
+        auto ec = gemm->Run(operation,
                             1.f,
                             in.data,
                             a_desc,
@@ -263,7 +272,6 @@ struct Linear::Impl {
     }
 
 private:
-    gemm::Gemm           gemm_;
     gemm::DispatchPolicy dispatch_policy_{gemm::DispatchPolicy::kDefault};
     gemm::Workspace      workspace_;
 
