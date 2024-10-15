@@ -367,6 +367,7 @@ struct DispatchCache::Impl {
     // Print a summary of how many cases a kernel is used
     void Summary(const std::vector<std::pair<GemmDesc, LaunchSpec>>& entries) const
     {
+        std::lock_guard<std::mutex> lock(mutex_);
         std::vector<Kernel*> uses{nullptr};
         std::copy(kernels_.begin(), kernels_.end(), std::back_inserter(uses));
 
