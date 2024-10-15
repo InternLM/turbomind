@@ -49,9 +49,7 @@ struct Linear::Impl {
         check_cuda_error(cudaFree(scales_zeros_));
     }
 
-    void post_init(std::shared_ptr<Tensor> qweight, std::shared_ptr<Tensor> scales, std::shared_ptr<Tensor> qzeros,
-                   bool simt) {
-        cudaDeviceSynchronize();
+    void post_init(std::shared_ptr<Tensor> qweight, const Tensor& scales, const Tensor& qzeros, bool simt) {
         const auto workspace_size = input_dims_ * output_dims_ * sizeof(uint16_t);
         void *workspace {};
         check_cuda_error(cudaMalloc((void**)&workspace, workspace_size));
@@ -62,10 +60,10 @@ struct Linear::Impl {
         check_cuda_error(cudaFree(workspace));
     }
 
-    void forward(std::shared_ptr<Tensor> in, std::shared_ptr<Tensor> out) {
-        TM_CHECK(in->type == TYPE_FP16 && out->type == TYPE_FP16);
-        TM_CHECK(in->shape.size() == 2 && in->shape[1] == input_dims_);
-        TM_CHECK(out->shape.size() == 2 && out->shape[0] == in->shape[0] && out->shape[1] == output_dims_);
+    void forward(const Tensor& in, Tensor& out) {
+        TM_CHECK(in.type == TYPE_FP16 && out.type == TYPE_FP16);
+        TM_CHECK(in.shape.size() == 2 && in.shape[1] == input_dims_);
+        TM_CHECK(out.shape.size() == 2 && out.shape[0] == in.shape[0] && out.shape[1] == output_dims_);
 
         using namespace gemm;
 
@@ -79,7 +77,7 @@ struct Linear::Impl {
         const MatrixLayout a_desc{
             gemm::DataType::F16, // get_data_type_v<T>,
             kRowMajor,
-            (int)in->shape[0], // row
+            (int)in.shape[0], // row
             (int)input_dims_,  // col
             (int)input_dims_   // input_data.pitch, // input_data.pitch = input_dims_ if input_data.pitch==0
         };
@@ -87,14 +85,14 @@ struct Linear::Impl {
         const MatrixLayout c_desc{
             gemm::DataType::F16, // get_data_type_v<T>,
             kRowMajor,
-            (int)in->shape[0], // row
+            (int)in.shape[0], // row
             (int)output_dims_, // col
             (int)output_dims_
         };
 
         auto ec = gemm_.Run(operation,
                             1.f,
-                            in->data,
+                            in.data,
                             a_desc,
                             nullptr,
                             {},
@@ -103,9 +101,9 @@ struct Linear::Impl {
                             scales_zeros_,
                             q_desc_,
                             0.0f,
-                            out->data,
+                            out.data,
                             c_desc,
-                            const_cast<void*>(out->data),
+                            const_cast<void*>(out.data),
                             c_desc,
                             workspace_,
                             stream_);
@@ -180,8 +178,8 @@ struct Linear::Impl {
     }
 
     void convert_scales_zeros(void* workspace,
-                            std::shared_ptr<Tensor> scales,
-                            std::shared_ptr<Tensor> qzeros,
+                            const Tensor& scales,
+                            const Tensor& qzeros,
                             size_t input_dims,
                             size_t output_dims,
                             int group_size,
@@ -189,7 +187,7 @@ struct Linear::Impl {
         if constexpr (0) {
             std::cout << "scales: " << std::endl;
             std::vector<__half> tmp(input_dims / group_size * output_dims);
-            cudaMemcpy(tmp.data(), scales->data, sizeof(__half) * tmp.size(), cudaMemcpyDefault);
+            cudaMemcpy(tmp.data(), scales.data, sizeof(__half) * tmp.size(), cudaMemcpyDefault);
             cudaDeviceSynchronize();
             int i = 0;
             for (auto it = tmp.begin(); i < 1000 && it != tmp.end(); ++it, ++i) {
@@ -206,7 +204,7 @@ struct Linear::Impl {
         if constexpr (0) {
             std::cout << "zeros: " << std::endl;
             std::vector<__half> tmp(input_dims / group_size * output_dims);
-            cudaMemcpy(tmp.data(), qzeros->data, sizeof(__half) * tmp.size(), cudaMemcpyDefault);
+            cudaMemcpy(tmp.data(), qzeros.data, sizeof(__half) * tmp.size(), cudaMemcpyDefault);
             cudaDeviceSynchronize();
             int i = 0;
             for (auto it = tmp.begin(); i < 1000 && it != tmp.end(); ++it, ++i) {
@@ -226,7 +224,7 @@ struct Linear::Impl {
         using namespace gemm;
         auto [order_b, pack_b, order_v, pack_v] = get_weight_and_scales_layout(getSMVersion(), use_simt);
 
-        fuse_scales_and_zeros((half*)workspace, (const half*)scales->data, (half*)qzeros->data, scale_count);
+        fuse_scales_and_zeros((half*)workspace, (const half*)scales.data, (half*)qzeros.data, scale_count);
         sync_check_cuda_error();
 
         cudaDeviceSynchronize();
@@ -251,9 +249,6 @@ struct Linear::Impl {
             std::vector<__half> tmp(scale_count * 2);
             cudaMemcpy(tmp.data(), workspace, sizeof(__half) * tmp.size(), cudaMemcpyDefault);
             cudaDeviceSynchronize();
-            // for (const auto& x: tmp) {
-            //     std::cout << (float)x << " ";
-            // }
             int i = 0;
             for (auto it = tmp.begin(); i < 1000 && it != tmp.end(); ++it, ++i) {
                 std::cout << __half2float(*it) << " ";
@@ -268,7 +263,6 @@ struct Linear::Impl {
     }
 
 private:
-    // cublasMMWrapper*     cublas_wrapper_;
     gemm::Gemm           gemm_;
     gemm::DispatchPolicy dispatch_policy_{gemm::DispatchPolicy::kDefault};
     gemm::Workspace      workspace_;
@@ -290,14 +284,11 @@ Linear::Linear(size_t input_dims, size_t output_dims, int w_bit, int group_size)
     impl_ = std::make_shared<Impl>(input_dims, output_dims, w_bit, group_size);
 }
 
-void Linear::post_init(std::shared_ptr<Tensor> qweight,
-                       std::shared_ptr<Tensor> scales,
-                       std::shared_ptr<Tensor> qzeros,
-                       bool simt) {
+void Linear::post_init(std::shared_ptr<Tensor> qweight, const Tensor& scales, const Tensor& qzeros, bool simt) {
     impl_->post_init(qweight, scales, qzeros, simt);
 }
 
-void Linear::forward(std::shared_ptr<Tensor> in, std::shared_ptr<Tensor> out)
+void Linear::forward(const Tensor& in, Tensor& out)
 {
     impl_->forward(in, out);
 }

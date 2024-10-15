@@ -22,25 +22,13 @@ enum class WeightType : int
     kINT4
 };
 
-std::shared_ptr<Tensor> convert_qweight(std::shared_ptr<Tensor> qweight,
-                                        size_t input_dims,
-                                        size_t output_dims,
-                                        bool use_simt);
-std::shared_ptr<Tensor> convert_scales_zeros(std::shared_ptr<Tensor> scales,
-                                             std::shared_ptr<Tensor> qzeros,
-                                             std::shared_ptr<Tensor> scales_zeros,
-                                             size_t input_dims,
-                                             size_t output_dims,
-                                             int group_size,
-                                             bool use_simt);
-
 
 class Linear {
 public:
     Linear(size_t input_dims, size_t output_dims, int w_bit, int group_size);
-    void post_init(std::shared_ptr<Tensor> qweight, std::shared_ptr<Tensor> scales, std::shared_ptr<Tensor> qzeros,
+    void post_init(std::shared_ptr<Tensor> qweight, const Tensor& scales, const Tensor& qzeros,
                    bool simt);
-    void forward(std::shared_ptr<Tensor> in, std::shared_ptr<Tensor> out);
+    void forward(const Tensor& in, Tensor& out);
     ~Linear() {}
 
 private:

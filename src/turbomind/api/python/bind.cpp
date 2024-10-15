@@ -335,11 +335,11 @@ PYBIND11_MODULE(turbomind_kernels, m) {
             auto _qweight = TorchTensorToTurbomindTensor(qweight);
             auto _scales = TorchTensorToTurbomindTensor(scales);
             auto _qzeros = TorchTensorToTurbomindTensor(qzeros);
-            linear->post_init(_qweight, _scales, _qzeros, simt);
+            linear->post_init(_qweight, *_scales, *_qzeros, simt);
         })
         .def("forward", [](turbomind::Linear* linear, py::object in, py::object out) {
             auto _in = TorchTensorToTurbomindTensor(in);
             auto _out = TorchTensorToTurbomindTensor(out);
-            return linear->forward(_in, _out);
+            return linear->forward(*_in, *_out);
         });
 }
