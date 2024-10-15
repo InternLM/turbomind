@@ -36,15 +36,15 @@ struct Linear::Impl {
 
         workspace_.barriers_size = gemm::Gemm::kBarriersSize;
         workspace_.partials_size = gemm::Gemm::kPartialsSize;
-        cudaMallocAsync(&workspace_.barriers, workspace_.barriers_size, stream_);
-        cudaMallocAsync(&workspace_.partials, workspace_.partials_size, stream_);
-        cudaMemsetAsync(workspace_.barriers, 0, workspace_.barriers_size, stream_);
+        cudaMallocAsync(&workspace_.barriers, workspace_.barriers_size, 0);
+        cudaMallocAsync(&workspace_.partials, workspace_.partials_size, 0);
+        cudaMemsetAsync(workspace_.barriers, 0, workspace_.barriers_size, 0);
     }
 
     ~Impl()
     {
-        cudaFreeAsync(workspace_.barriers, stream_);
-        cudaFreeAsync(workspace_.partials, stream_);
+        cudaFreeAsync(workspace_.barriers, 0);
+        cudaFreeAsync(workspace_.partials, 0);
         workspace_ = {};
         check_cuda_error(cudaFree(scales_zeros_));
     }
@@ -60,7 +60,7 @@ struct Linear::Impl {
         check_cuda_error(cudaFree(workspace));
     }
 
-    void forward(const Tensor& in, Tensor& out) {
+    void forward(const Tensor& in, Tensor& out, cudaStream_t stream) {
         TM_CHECK(in.type == TYPE_FP16 && out.type == TYPE_FP16);
         TM_CHECK(in.shape.size() == 2 && in.shape[1] == input_dims_);
         TM_CHECK(out.shape.size() == 2 && out.shape[0] == in.shape[0] && out.shape[1] == output_dims_);
@@ -106,7 +106,7 @@ struct Linear::Impl {
                             const_cast<void*>(out.data),
                             c_desc,
                             workspace_,
-                            stream_);
+                            stream);
 
         if (ec) {
             printf("%s: %d", __PRETTY_FUNCTION__, ec);
@@ -266,7 +266,6 @@ private:
     gemm::Gemm           gemm_;
     gemm::DispatchPolicy dispatch_policy_{gemm::DispatchPolicy::kDefault};
     gemm::Workspace      workspace_;
-    cudaStream_t         stream_{};
 
     size_t input_dims_;
     size_t output_dims_;
@@ -288,8 +287,8 @@ void Linear::post_init(std::shared_ptr<Tensor> qweight, const Tensor& scales, co
     impl_->post_init(qweight, scales, qzeros, simt);
 }
 
-void Linear::forward(const Tensor& in, Tensor& out)
+void Linear::forward(const Tensor& in, Tensor& out, cudaStream_t stream)
 {
-    impl_->forward(in, out);
+    impl_->forward(in, out, stream);
 }
 }  // namespace turbomind
