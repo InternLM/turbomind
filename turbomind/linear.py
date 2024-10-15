@@ -163,7 +163,8 @@ class Linear(torch.nn.Module):
             dtype=torch.float16,
             device=x.device,
         )
-        self.linear.forward(x, out)
+        stream = torch.cuda.current_stream()
+        self.linear.forward(x, out, stream.cuda_stream)
         out = torch.from_dlpack(out)
         if self.bias is not None:
             out.add_(self.bias)

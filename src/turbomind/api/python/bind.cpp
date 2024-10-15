@@ -329,16 +329,17 @@ PYBIND11_MODULE(_turbomind_ext, m) {
         .def(py::init([](size_t in_features, size_t out_features, int w_bit, int group_size) {
             return new turbomind::Linear(in_features, out_features, w_bit, group_size);
         }))
-        .def("post_init", [](turbomind::Linear* linear, py::object qweight, py::object scales, py::object qzeros,
+        .def("post_init", [](turbomind::Linear* self, py::object qweight, py::object scales, py::object qzeros,
                              bool simt){
             auto _qweight = TorchTensorToTurbomindTensor(qweight);
             auto _scales = TorchTensorToTurbomindTensor(scales);
             auto _qzeros = TorchTensorToTurbomindTensor(qzeros);
-            linear->post_init(_qweight, *_scales, *_qzeros, simt);
+            self->post_init(_qweight, *_scales, *_qzeros, simt);
         })
-        .def("forward", [](turbomind::Linear* linear, py::object in, py::object out) {
+        .def("forward", [](turbomind::Linear* self, py::object in, py::object out, int64_t stream_id = 0) {
             auto _in = TorchTensorToTurbomindTensor(in);
             auto _out = TorchTensorToTurbomindTensor(out);
-            return linear->forward(*_in, *_out);
+            auto stream = reinterpret_cast<cudaStream_t>(stream_id);
+            return self->forward(*_in, *_out, stream);
         });
 }

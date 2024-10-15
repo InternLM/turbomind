@@ -118,7 +118,11 @@ model.scales = scales
 
 model.post_init()
 
-res = model(x)
+stream = torch.cuda.Stream()
+with torch.cuda.stream(stream):
+    res = model(x)
+stream.synchronize()
+
 print(f'tm.linear.res: {res}')
 abs_diff = torch.abs(res - ref_res).float()
 rel_diff = abs_diff / torch.max(torch.abs(ref_res), torch.abs(res))
