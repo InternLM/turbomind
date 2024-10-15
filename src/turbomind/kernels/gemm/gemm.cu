@@ -65,7 +65,7 @@ struct Gemm::Impl {
         }
         measurer_.emplace(CreateStoppingCriterion(tuning_.min_iter, tuning_.max_iter, tuning_.max_time));
     }
-
+    ~Impl() = default;
     // find launch spec in dispatch cache, dispatch by heuristic on cache miss
     LaunchSpec Dispatch(DispatchPolicy policy, GemmDesc desc, size_t barriers_size, size_t partials_size)
     {
@@ -293,6 +293,16 @@ struct Gemm::Impl {
 Gemm::Gemm(): impl_{new Impl{}} {}
 
 Gemm::~Gemm() = default;
+
+Gemm::Gemm(Gemm&& other) : impl_(std::move(other.impl_)) {}
+
+Gemm& Gemm::operator=(Gemm&& other)
+{
+    if (this != &other) {
+        impl_ = std::move(other.impl_);
+    }
+    return *this;
+}
 
 int Gemm::Run(const Operation&    operation,
               float               alpha,
