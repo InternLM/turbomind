@@ -14,10 +14,10 @@ sys.path.append(osp.join(turbomind_dir, 'lib'))
 
 try:
     import _turbomind_ext
-    TURBOMIND_KERNELS_INSTALLED = True
+    TURBOMIND_EXTENSION_INSTALLED = True
 except Exception as e:
     logging.error(f'_turbomind_ext is not installed: {e}')
-    TURBOMIND_KERNELS_INSTALLED = False
+    TURBOMIND_EXTENSION_INSTALLED = False
 
 
 def pad_out_dims(x: torch.Tensor, dims: int):
@@ -95,17 +95,17 @@ class Linear(torch.nn.Module):
             ),
         )
 
-        # if bias:
-        #     self.register_buffer(
-        #         'bias',
-        #         torch.zeros(
-        #             (out_features),
-        #             dtype=torch.float16,
-        #             device=device,
-        #         ),
-        #     )
-        # else:
-        #     self.bias = None
+        if bias:
+            self.register_buffer(
+                'bias',
+                torch.zeros(
+                    (out_features),
+                    dtype=torch.float16,
+                    device=device,
+                ),
+            )
+        else:
+            self.bias = None
 
         self.linear = _turbomind_ext.Linear(self.in_features,
                                             self.out_features, self.w_bit,
@@ -149,7 +149,7 @@ class Linear(torch.nn.Module):
 
     @torch.no_grad()
     def forward(self, x):
-        assert TURBOMIND_KERNELS_INSTALLED, (
+        assert TURBOMIND_EXTENSION_INSTALLED, (
             'turbomind kernels are not installed. '
             'Please perform `pip install turbomind` to install turbomind '
             'kernels.')
@@ -165,6 +165,8 @@ class Linear(torch.nn.Module):
         )
         self.linear.forward(x, out)
         out = torch.from_dlpack(out)
+        if self.bias is not None:
+            out.add_(self.bias)
         return out.view(out_shape)
 
     def __call__(self, x: torch.Tensor):
