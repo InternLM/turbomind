@@ -1,15 +1,14 @@
 // Copyright (c) OpenMMLab. All rights reserved.
 
+#include "src/turbomind/api/python/linear.h"
 #include "src/turbomind/kernels/gemm/cast.h"
 #include "src/turbomind/kernels/gemm/gemm.h"
 #include "src/turbomind/kernels/gemm/types.h"
-#include "src/turbomind/api/python/linear.h"
 #include "src/turbomind/utils/cuda_utils.h"
-#include <fstream>
-#include <cuda_runtime.h>
-#include <iostream>
 #include <cuda_fp16.h>
-
+#include <cuda_runtime.h>
+#include <fstream>
+#include <iostream>
 
 namespace turbomind {
 

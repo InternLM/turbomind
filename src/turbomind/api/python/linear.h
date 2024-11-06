@@ -4,13 +4,13 @@
 
 #include "src/turbomind/kernels/gemm/types.h"
 #include "src/turbomind/utils/tensor.h"
-#include <istream>
-#include <ostream>
-#include <memory>
 #include <cuda_runtime.h>
+#include <istream>
+#include <memory>
+#include <ostream>
+
 
 namespace turbomind {
-
 
 enum class WeightType : int {
     kFP32,
