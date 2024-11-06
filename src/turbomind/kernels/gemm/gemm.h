@@ -20,7 +20,7 @@ public:
 
     Gemm(Gemm&& other);
     Gemm& operator=(Gemm&& other);
-    Gemm(const Gemm&) = delete;
+    Gemm(const Gemm&)            = delete;
     Gemm& operator=(const Gemm&) = delete;
 
     [[nodiscard]] int Run(const Operation&    operation,

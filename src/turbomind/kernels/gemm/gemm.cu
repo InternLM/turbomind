@@ -294,7 +294,7 @@ Gemm::Gemm(): impl_{new Impl{}} {}
 
 Gemm::~Gemm() = default;
 
-Gemm::Gemm(Gemm&& other) : impl_(std::move(other.impl_)) {}
+Gemm::Gemm(Gemm&& other): impl_(std::move(other.impl_)) {}
 
 Gemm& Gemm::operator=(Gemm&& other)
 {

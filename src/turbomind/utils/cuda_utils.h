@@ -39,16 +39,13 @@ namespace turbomind {
 // workspace for cublas gemm : 32MB
 #define CUBLAS_WORKSPACE_SIZE 33554432
 
-typedef struct __align__(4)
-{
+typedef struct __align__(4) {
     half x, y, z, w;
-}
-half4;
+} half4;
 
 /* **************************** type definition ***************************** */
 
-enum CublasDataType
-{
+enum CublasDataType {
     FLOAT_DATATYPE    = 0,
     HALF_DATATYPE     = 1,
     BFLOAT16_DATATYPE = 2,
@@ -56,8 +53,7 @@ enum CublasDataType
     FP8_DATATYPE      = 4
 };
 
-enum FtCudaDataType
-{
+enum FtCudaDataType {
     FP32 = 0,
     FP16 = 1,
     BF16 = 2,
@@ -65,8 +61,7 @@ enum FtCudaDataType
     FP8  = 4
 };
 
-enum class OperationType
-{
+enum class OperationType {
     FP32,
     FP16,
     BF16,
@@ -416,11 +411,11 @@ void compareTwoTensor(
     for (int i = 0; i < size; i++) {
         if (i < print_size) {
             printf("%4d | % 6.4f | % 6.4f | % 6.4f | % 7.4f |",
-                        i,
-                        (float)h_pred[i],
-                        (float)h_ref[i],
-                        abs((float)h_pred[i] - (float)h_ref[i]),
-                        abs((float)h_pred[i] - (float)h_ref[i]) / (abs((float)h_ref[i]) + 1e-6f) * 100.f);
+                   i,
+                   (float)h_pred[i],
+                   (float)h_ref[i],
+                   abs((float)h_pred[i] - (float)h_ref[i]),
+                   abs((float)h_pred[i] - (float)h_ref[i]) / (abs((float)h_ref[i]) + 1e-6f) * 100.f);
         }
         if ((float)h_pred[i] == 0) {
             continue;
