@@ -1,17 +1,17 @@
 
 #include "src/turbomind/api/python/dlpack.h"
 #include "src/turbomind/api/python/linear.h"
-#include "src/turbomind/utils/tensor.h"
 #include "src/turbomind/utils/cuda_utils.h"
+#include "src/turbomind/utils/tensor.h"
 #include <cuda_runtime.h>
 #include <memory>
+#include <numeric>
 #include <pybind11/functional.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/pytypes.h>
 #include <pybind11/stl.h>
 #include <pybind11/stl_bind.h>
 #include <stdexcept>
-#include <numeric>
 
 namespace py = pybind11;
 using namespace pybind11::literals;
@@ -208,7 +208,8 @@ std::shared_ptr<turbomind::Tensor> TorchTensorToTurbomindTensor(py::object obj)
     return DLManagedTensorToTurbomindTensor(dlmt);
 }
 
-PYBIND11_MODULE(_turbomind_ext, m) {
+PYBIND11_MODULE(_turbomind_ext, m)
+{
     py::enum_<turbomind::WeightType>(m, "WeightType")
         .value("kFP32", turbomind::WeightType::kFP32)
         .value("kFP16", turbomind::WeightType::kFP16)
@@ -247,10 +248,10 @@ PYBIND11_MODULE(_turbomind_ext, m) {
         .def_readonly("type", &turbomind::Tensor::type)
         .def_readonly("shape", &turbomind::Tensor::shape)
         .def_readonly("data", &turbomind::Tensor::data)
-        .def(py::init([](const turbomind::MemoryType   where,
-                         const turbomind::DataType     type,
-                         const std::vector<size_t>&    shape,
-                         const long                    data) {
+        .def(py::init([](const turbomind::MemoryType where,
+                         const turbomind::DataType   type,
+                         const std::vector<size_t>&  shape,
+                         const long                  data) {
             auto data_ptr = reinterpret_cast<void*>(data);
             return new turbomind::Tensor(where, type, shape, data_ptr);
         }))
@@ -329,16 +330,16 @@ PYBIND11_MODULE(_turbomind_ext, m) {
         .def(py::init([](size_t in_features, size_t out_features, int w_bit, int group_size) {
             return new turbomind::Linear(in_features, out_features, w_bit, group_size);
         }))
-        .def("post_init", [](turbomind::Linear* self, py::object qweight, py::object scales, py::object qzeros,
-                             bool simt){
-            auto _qweight = TorchTensorToTurbomindTensor(qweight);
-            auto _scales = TorchTensorToTurbomindTensor(scales);
-            auto _qzeros = TorchTensorToTurbomindTensor(qzeros);
-            self->post_init(_qweight, *_scales, *_qzeros, simt);
-        })
+        .def("post_init",
+             [](turbomind::Linear* self, py::object qweight, py::object scales, py::object qzeros, bool simt) {
+                 auto _qweight = TorchTensorToTurbomindTensor(qweight);
+                 auto _scales  = TorchTensorToTurbomindTensor(scales);
+                 auto _qzeros  = TorchTensorToTurbomindTensor(qzeros);
+                 self->post_init(_qweight, *_scales, *_qzeros, simt);
+             })
         .def("forward", [](turbomind::Linear* self, py::object in, py::object out, int64_t stream_id = 0) {
-            auto _in = TorchTensorToTurbomindTensor(in);
-            auto _out = TorchTensorToTurbomindTensor(out);
+            auto _in    = TorchTensorToTurbomindTensor(in);
+            auto _out   = TorchTensorToTurbomindTensor(out);
             auto stream = reinterpret_cast<cudaStream_t>(stream_id);
             return self->forward(*_in, *_out, stream);
         });

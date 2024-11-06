@@ -14,18 +14,22 @@ namespace turbomind {
 
 class GemmPool {
 public:
-    static GemmPool& getInstance() {
+    static GemmPool& getInstance()
+    {
         static GemmPool singleton;
         return singleton;
     }
 
-    gemm::Gemm* get(int device_id) {
+    gemm::Gemm* get(int device_id)
+    {
         TM_CHECK(device_id < pool_.size());
         return &pool_[device_id];
     }
     ~GemmPool() = default;
+
 private:
-    GemmPool() {
+    GemmPool()
+    {
         int device_count = 0;
         check_cuda_error(cudaGetDeviceCount(&device_count));
         pool_.resize(device_count);
@@ -33,11 +37,11 @@ private:
     std::vector<gemm::Gemm> pool_;
 };
 
-
 struct Linear::Impl {
 
-    Impl(size_t input_dims, size_t output_dims, int w_bit, int group_size) :
-        input_dims_(input_dims), output_dims_(output_dims), w_bit_(w_bit), group_size_(group_size) {
+    Impl(size_t input_dims, size_t output_dims, int w_bit, int group_size):
+        input_dims_(input_dims), output_dims_(output_dims), w_bit_(w_bit), group_size_(group_size)
+    {
         workspace_ = {};
 
         workspace_.barriers_size = gemm::Gemm::kBarriersSize;
@@ -55,9 +59,10 @@ struct Linear::Impl {
         check_cuda_error(cudaFree(scales_zeros_));
     }
 
-    void post_init(std::shared_ptr<Tensor> qweight, const Tensor& scales, const Tensor& qzeros, bool simt) {
+    void post_init(std::shared_ptr<Tensor> qweight, const Tensor& scales, const Tensor& qzeros, bool simt)
+    {
         const auto workspace_size = input_dims_ * output_dims_ * sizeof(uint16_t);
-        void *workspace {};
+        void*      workspace{};
         check_cuda_error(cudaMalloc((void**)&workspace, workspace_size));
 
         convert_qweight(workspace, qweight, input_dims_, output_dims_, simt);
@@ -66,44 +71,39 @@ struct Linear::Impl {
         check_cuda_error(cudaFree(workspace));
     }
 
-    void forward(const Tensor& in, Tensor& out, cudaStream_t stream) {
+    void forward(const Tensor& in, Tensor& out, cudaStream_t stream)
+    {
         TM_CHECK(in.type == TYPE_FP16 && out.type == TYPE_FP16);
         TM_CHECK(in.shape.size() == 2 && in.shape[1] == input_dims_);
         TM_CHECK(out.shape.size() == 2 && out.shape[0] == in.shape[0] && out.shape[1] == output_dims_);
 
         using namespace gemm;
 
-        const Operation operation{dispatch_policy_,
-                                  Epilogue::kNone,
-                                  {QuantType::kNone},
-                                  {QuantType::kDefault, group_size_},
-                                  0,
-                                  nullptr};
+        const Operation operation{
+            dispatch_policy_, Epilogue::kNone, {QuantType::kNone}, {QuantType::kDefault, group_size_}, 0, nullptr};
 
         const MatrixLayout a_desc{
-            gemm::DataType::F16, // get_data_type_v<T>,
+            gemm::DataType::F16,  // get_data_type_v<T>,
             kRowMajor,
-            (int)in.shape[0], // row
+            (int)in.shape[0],  // row
             (int)input_dims_,  // col
             (int)input_dims_   // input_data.pitch, // input_data.pitch = input_dims_ if input_data.pitch==0
         };
 
-        const MatrixLayout c_desc{
-            gemm::DataType::F16, // get_data_type_v<T>,
-            kRowMajor,
-            (int)in.shape[0], // row
-            (int)output_dims_, // col
-            (int)output_dims_
-        };
-        int device_id;
+        const MatrixLayout c_desc{gemm::DataType::F16,  // get_data_type_v<T>,
+                                  kRowMajor,
+                                  (int)in.shape[0],   // row
+                                  (int)output_dims_,  // col
+                                  (int)output_dims_};
+        int                device_id;
         check_cuda_error(cudaGetDevice(&device_id));
         auto gemm = GemmPool::getInstance().get(device_id);
-        auto ec = gemm->Run(operation,
+        auto ec   = gemm->Run(operation,
                             1.f,
                             in.data,
                             a_desc,
                             nullptr,
-                            {},
+                              {},
                             weight_->data,
                             k_desc_,
                             scales_zeros_,
@@ -121,7 +121,9 @@ struct Linear::Impl {
             std::abort();
         }
     }
-    void convert_qweight(void* workspace, std::shared_ptr<Tensor> weight, size_t input_dims, size_t output_dims, bool use_simt) {
+    void convert_qweight(
+        void* workspace, std::shared_ptr<Tensor> weight, size_t input_dims, size_t output_dims, bool use_simt)
+    {
         using namespace gemm;
         auto [order_b, pack_b, order_v, pack_v] = get_weight_and_scales_layout(getSMVersion(), use_simt);
 
@@ -185,13 +187,14 @@ struct Linear::Impl {
         weight_ = weight;
     }
 
-    void convert_scales_zeros(void* workspace,
-                            const Tensor& scales,
-                            const Tensor& qzeros,
-                            size_t input_dims,
-                            size_t output_dims,
-                            int group_size,
-                            bool use_simt) {
+    void convert_scales_zeros(void*         workspace,
+                              const Tensor& scales,
+                              const Tensor& qzeros,
+                              size_t        input_dims,
+                              size_t        output_dims,
+                              int           group_size,
+                              bool          use_simt)
+    {
         if constexpr (0) {
             std::cout << "scales: " << std::endl;
             std::vector<__half> tmp(input_dims / group_size * output_dims);
@@ -226,7 +229,6 @@ struct Linear::Impl {
             std::cout << std::endl;
         }
 
-
         const auto scale_count = input_dims / group_size * output_dims;
 
         using namespace gemm;
@@ -243,7 +245,7 @@ struct Linear::Impl {
             gemm::DataType::U32,
             order_v,
             (int)input_dims / group_size,  // k
-            (int)output_dims, // n
+            (int)output_dims,              // n
             (int)output_dims,
         };
 
@@ -286,11 +288,13 @@ private:
     gemm::MatrixLayout q_desc_;
 };
 
-Linear::Linear(size_t input_dims, size_t output_dims, int w_bit, int group_size) {
+Linear::Linear(size_t input_dims, size_t output_dims, int w_bit, int group_size)
+{
     impl_ = std::make_shared<Impl>(input_dims, output_dims, w_bit, group_size);
 }
 
-void Linear::post_init(std::shared_ptr<Tensor> qweight, const Tensor& scales, const Tensor& qzeros, bool simt) {
+void Linear::post_init(std::shared_ptr<Tensor> qweight, const Tensor& scales, const Tensor& qzeros, bool simt)
+{
     impl_->post_init(qweight, scales, qzeros, simt);
 }
 

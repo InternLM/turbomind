@@ -20,12 +20,10 @@ enum class WeightType : int {
     kINT4
 };
 
-
 class Linear {
 public:
     Linear(size_t input_dims, size_t output_dims, int w_bit, int group_size);
-    void post_init(std::shared_ptr<Tensor> qweight, const Tensor& scales, const Tensor& qzeros,
-                   bool simt);
+    void post_init(std::shared_ptr<Tensor> qweight, const Tensor& scales, const Tensor& qzeros, bool simt);
     void forward(const Tensor& in, Tensor& out, cudaStream_t stream = nullptr);
     ~Linear() {}
 
@@ -33,4 +31,4 @@ private:
     struct Impl;
     std::shared_ptr<Impl> impl_;
 };
-};
+};  // namespace turbomind
