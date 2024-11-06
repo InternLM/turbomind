@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include <cuda_fp16.h>
 #include <cuda_runtime_api.h>
 #include <numeric>
@@ -11,7 +10,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace turbomind{
+namespace turbomind {
 
 typedef enum datatype_enum
 {
@@ -39,7 +38,6 @@ typedef enum memorytype_enum
     MEMORY_GPU
 } MemoryType;
 
-
 struct Tensor {
     MemoryType          where;
     DataType            type;
@@ -52,18 +50,21 @@ struct Tensor {
     {
     }
 
-    size_t size() const {
+    size_t size() const
+    {
         if (data == nullptr || shape.size() == 0) {
             return 0;
         }
         return std::accumulate(shape.begin(), shape.end(), (size_t)1, std::multiplies<size_t>());
     }
 
-    size_t sizeBytes() const {
+    size_t sizeBytes() const
+    {
         return size() * typeSize();
     }
 
-    size_t typeSize() const {
+    size_t typeSize() const
+    {
         static const std::unordered_map<DataType, size_t> type_map{{TYPE_BOOL, sizeof(bool)},
                                                                    {TYPE_BYTES, sizeof(char)},
                                                                    {TYPE_UINT8, sizeof(uint8_t)},
@@ -83,4 +84,4 @@ struct Tensor {
         return type_map.at(type);
     }
 };
-} // namespace turbomind
+}  // namespace turbomind

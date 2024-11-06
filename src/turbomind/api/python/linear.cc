@@ -103,7 +103,7 @@ struct Linear::Impl {
                             in.data,
                             a_desc,
                             nullptr,
-                              {},
+                            {},
                             weight_->data,
                             k_desc_,
                             scales_zeros_,
