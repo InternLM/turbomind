@@ -9,7 +9,6 @@
 #include <memory>
 #include <ostream>
 
-
 namespace turbomind {
 
 enum class WeightType : int {
