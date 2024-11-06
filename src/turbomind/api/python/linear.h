@@ -2,18 +2,17 @@
 
 #pragma once
 
+#include "src/turbomind/kernels/gemm/types.h"
+#include "src/turbomind/utils/tensor.h"
 #include <istream>
 #include <ostream>
 #include <memory>
 #include <cuda_runtime.h>
-#include "src/turbomind/kernels/gemm/types.h"
-#include "src/turbomind/utils/tensor.h"
 
 namespace turbomind {
 
 
-enum class WeightType : int
-{
+enum class WeightType : int {
     kFP32,
     kFP16,
     kFP8,  // not supported yet
