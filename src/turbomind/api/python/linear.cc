@@ -5,6 +5,7 @@
 #include "src/turbomind/kernels/gemm/gemm.h"
 #include "src/turbomind/kernels/gemm/types.h"
 #include "src/turbomind/utils/cuda_utils.h"
+#include "src/turbomind/utils/macro.h"
 #include <cuda_fp16.h>
 #include <cuda_runtime.h>
 #include <fstream>
