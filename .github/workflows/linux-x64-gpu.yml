@@ -58,5 +58,4 @@ jobs:
             make -j$(nproc) && make install
             cd ..
             rm -rf build
-            export CUDAVER=$(nvcc --version | sed -n 's/^.*release \([0-9]\+\).*$/\1/p')
-            python setup.py bdist_wheel --cuda=${{ matrix.cudaver }} --plat-name $PLAT_NAME -d /tmp
+            python setup.py bdist_wheel --plat-name manylinux2014_x86_64 -d /tmp
