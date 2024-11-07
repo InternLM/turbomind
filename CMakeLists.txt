@@ -12,13 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.11 FATAL_ERROR)
 project(TurboMind LANGUAGES CXX CUDA)
 
 find_package(CUDA 11.4 REQUIRED)
-
-
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 
 option(BUILD_TEST "Build tests" OFF)
 
@@ -50,8 +47,6 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=gold")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fuse-ld=gold")
 set(CUDA_PATH ${CUDA_TOOLKIT_ROOT_DIR})
 
-
-list(APPEND CMAKE_MODULE_PATH ${CUDA_PATH}/lib64)
 
 # profiling
 option(USE_NVTX "Whether or not to use nvtx" ON)
