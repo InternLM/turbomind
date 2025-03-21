@@ -10,8 +10,25 @@
 #include <cuda_runtime.h>
 #include <fstream>
 #include <iostream>
+#include <mutex>
+#include <unordered_map>
 
 namespace turbomind {
+
+struct TupleHash {
+    size_t operator()(const std::tuple<int, cudaStream_t>& key) const {
+        size_t seed = 0;
+        hash_combine(seed, std::get<0>(key));
+        hash_combine(seed, reinterpret_cast<void*>(std::get<1>(key)));
+        return seed;
+    }
+private:
+    template <typename T>
+    void hash_combine(size_t& seed, const T& v) const {
+        std::hash<T> hasher;
+        seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    }
+};
 
 class GemmPool {
 public:
@@ -42,21 +59,10 @@ struct Linear::Impl {
 
     Impl(size_t input_dims, size_t output_dims, int w_bit, int group_size):
         input_dims_(input_dims), output_dims_(output_dims), w_bit_(w_bit), group_size_(group_size)
-    {
-        workspace_ = {};
-
-        workspace_.barriers_size = gemm::Gemm::kBarriersSize;
-        workspace_.partials_size = gemm::Gemm::kPartialsSize;
-        cudaMallocAsync(&workspace_.barriers, workspace_.barriers_size, 0);
-        cudaMallocAsync(&workspace_.partials, workspace_.partials_size, 0);
-        cudaMemsetAsync(workspace_.barriers, 0, workspace_.barriers_size, 0);
-    }
+    {}
 
     ~Impl()
     {
-        cudaFreeAsync(workspace_.barriers, 0);
-        cudaFreeAsync(workspace_.partials, 0);
-        workspace_ = {};
         check_cuda_error(cudaFree(scales_zeros_));
     }
 
@@ -70,6 +76,12 @@ struct Linear::Impl {
         convert_scales_zeros(workspace, scales, qzeros, input_dims_, output_dims_, group_size_, simt);
 
         check_cuda_error(cudaFree(workspace));
+
+        // try to create a gemm workspace for <device_id, default_stream>
+        //and cache it to `workspace_cache_`
+        int device_id;
+        check_cuda_error(cudaGetDevice(&device_id));
+        (void)getWorkspace(device_id, 0);
     }
 
     void forward(const Tensor& in, Tensor& out, cudaStream_t stream)
@@ -98,6 +110,7 @@ struct Linear::Impl {
                                   (int)output_dims_};
         int                device_id;
         check_cuda_error(cudaGetDevice(&device_id));
+        auto workspace = getWorkspace(device_id, stream);
         auto gemm = GemmPool::getInstance().get(device_id);
         auto ec   = gemm->Run(operation,
                             1.f,
@@ -114,7 +127,7 @@ struct Linear::Impl {
                             c_desc,
                             const_cast<void*>(out.data),
                             c_desc,
-                            workspace_,
+                            workspace,
                             stream);
 
         if (ec) {
@@ -274,8 +287,38 @@ struct Linear::Impl {
     }
 
 private:
+    static gemm::Workspace& getWorkspace(int device_id, cudaStream_t stream) {
+        std::lock_guard<std::mutex> lock(cache_mutex_);
+        auto key = std::make_tuple(device_id, stream);
+        auto it = workspace_cache_.find(key);
+        if (it != workspace_cache_.end()) {
+            return *it->second;
+        }
+
+        // create a new workspace if cache missed
+        // auto workspace = std::make_shared<gemm::Workspace>();
+        auto workspace = std::shared_ptr<gemm::Workspace>(new gemm::Workspace,
+            [](gemm::Workspace* p){
+                cudaFreeAsync(p->barriers, 0);
+                cudaFreeAsync(p->partials, 0);
+            });
+        workspace->barriers_size = gemm::Gemm::kBarriersSize;
+        workspace->partials_size = gemm::Gemm::kPartialsSize;
+        cudaMallocAsync(&workspace->barriers, workspace->barriers_size, stream);
+        cudaMallocAsync(&workspace->partials, workspace->partials_size, stream);
+        cudaMemsetAsync(workspace->barriers, 0, workspace->barriers_size, stream);
+
+        workspace_cache_[key] = workspace;
+        return *workspace;
+    }
+
+private:
+    // A global workspace cache to avoid creating workspace for every Linear::Impl instance
+    // The key refers to a pair of <device_id, cudaStream_t>
+    static std::unordered_map<std::tuple<int, cudaStream_t>, std::shared_ptr<gemm::Workspace>, TupleHash> workspace_cache_;
+    static std::mutex cache_mutex_;
+
     gemm::DispatchPolicy dispatch_policy_{gemm::DispatchPolicy::kDefault};
-    gemm::Workspace      workspace_;
 
     size_t input_dims_;
     size_t output_dims_;
@@ -288,6 +331,9 @@ private:
     gemm::MatrixLayout k_desc_;
     gemm::MatrixLayout q_desc_;
 };
+
+std::unordered_map<std::tuple<int, cudaStream_t>, std::shared_ptr<gemm::Workspace>, TupleHash> Linear::Impl::workspace_cache_;
+std::mutex Linear::Impl::cache_mutex_;
 
 Linear::Linear(size_t input_dims, size_t output_dims, int w_bit, int group_size)
 {

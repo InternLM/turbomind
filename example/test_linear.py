@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from safetensors import safe_open
 
 import turbomind as tm
 from turbomind.utils import unpack_awq_gemm
