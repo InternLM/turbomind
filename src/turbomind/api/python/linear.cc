@@ -25,7 +25,7 @@ struct TupleHash {
     }
 
 private:
-    template <typename T>
+    template<typename T>
     void hash_combine(size_t& seed, const T& v) const
     {
         std::hash<T> hasher;
@@ -301,11 +301,10 @@ private:
         }
 
         // create a new workspace if cache missed
-        auto workspace = std::shared_ptr<gemm::Workspace>(new gemm::Workspace,
-            [](gemm::Workspace* p){
-                cudaFreeAsync(p->barriers, 0);
-                cudaFreeAsync(p->partials, 0);
-            });
+        auto workspace = std::shared_ptr<gemm::Workspace>(new gemm::Workspace, [](gemm::Workspace* p){
+            cudaFreeAsync(p->barriers, 0);
+            cudaFreeAsync(p->partials, 0);
+        });
 
         workspace->barriers_size = gemm::Gemm::kBarriersSize;
         workspace->partials_size = gemm::Gemm::kPartialsSize;
