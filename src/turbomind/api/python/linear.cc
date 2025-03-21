@@ -309,9 +309,9 @@ private:
 
         workspace->barriers_size = gemm::Gemm::kBarriersSize;
         workspace->partials_size = gemm::Gemm::kPartialsSize;
-        cudaMallocAsync(&workspace->barriers, workspace->barriers_size, stream);
-        cudaMallocAsync(&workspace->partials, workspace->partials_size, stream);
-        cudaMemsetAsync(workspace->barriers, 0, workspace->barriers_size, stream);
+        check_cuda_error(cudaMallocAsync(&workspace->barriers, workspace->barriers_size, stream));
+        check_cuda_error(cudaMallocAsync(&workspace->partials, workspace->partials_size, stream));
+        check_cuda_error(cudaMemsetAsync(workspace->barriers, 0, workspace->barriers_size, stream));
 
         workspace_cache_[key] = workspace;
         return *workspace;
