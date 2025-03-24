@@ -80,12 +80,6 @@ struct Linear::Impl {
         convert_scales_zeros(workspace, scales, qzeros, input_dims_, output_dims_, group_size_, simt);
 
         check_cuda_error(cudaFree(workspace));
-
-        // try to create a gemm workspace for <device_id, default_stream>
-        // and cache it to `workspace_cache_`
-        int device_id;
-        check_cuda_error(cudaGetDevice(&device_id));
-        (void)getWorkspace(device_id, 0);
     }
 
     void forward(const Tensor& in, Tensor& out, cudaStream_t stream)
@@ -301,7 +295,7 @@ private:
         }
 
         // create a new workspace if cache missed
-        auto workspace = std::shared_ptr<gemm::Workspace>(new gemm::Workspace, [](gemm::Workspace* p){
+        auto workspace = std::shared_ptr<gemm::Workspace>(new gemm::Workspace, [](gemm::Workspace* p) {
             cudaFreeAsync(p->barriers, 0);
             cudaFreeAsync(p->partials, 0);
         });
