@@ -342,5 +342,6 @@ PYBIND11_MODULE(_turbomind_ext, m)
             auto _out   = TorchTensorToTurbomindTensor(out);
             auto stream = reinterpret_cast<cudaStream_t>(stream_id);
             return self->forward(*_in, *_out, stream);
-        });
+        })
+        .def_static("clear_workspaces", &turbomind::Linear::clearWorkspaces);
 }

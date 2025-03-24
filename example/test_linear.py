@@ -116,3 +116,5 @@ outliers = torch.sum(outliers) / outliers.shape[0]
 print(f'abs_diff {abs_diff:4f}, '
       f'rel_diff {rel_diff:4f}, '
       f'outliers {outliers:4f}')
+
+tm.Linear.clear_workspaces()

@@ -283,6 +283,10 @@ struct Linear::Impl {
         }
     }
 
+    static void clearWorkspaces() {
+        workspace_cache_.clear();
+    }
+
 private:
     static gemm::Workspace& getWorkspace(int device_id, cudaStream_t stream)
     {
@@ -295,9 +299,13 @@ private:
         }
 
         // create a new workspace if cache missed
-        auto workspace = std::shared_ptr<gemm::Workspace>(new gemm::Workspace, [](gemm::Workspace* p) {
-            cudaFreeAsync(p->barriers, 0);
-            cudaFreeAsync(p->partials, 0);
+        auto workspace = std::shared_ptr<gemm::Workspace>(new gemm::Workspace, [device_id](gemm::Workspace* p) {
+            int old{};
+            check_cuda_error(cudaGetDevice(&old));
+            check_cuda_error(cudaSetDevice(device_id));
+            check_cuda_error(cudaFree(p->barriers));
+            check_cuda_error(cudaFree(p->partials));
+            check_cuda_error(cudaSetDevice(old));
         });
 
         workspace->barriers_size = gemm::Gemm::kBarriersSize;
@@ -349,4 +357,9 @@ void Linear::forward(const Tensor& in, Tensor& out, cudaStream_t stream)
 {
     impl_->forward(in, out, stream);
 }
+
+void Linear::clearWorkspaces() {
+    Linear::Impl::clearWorkspaces();
+}
+
 }  // namespace turbomind

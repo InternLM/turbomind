@@ -28,6 +28,8 @@ public:
     void forward(const Tensor& in, Tensor& out, cudaStream_t stream = nullptr);
     ~Linear() {}
 
+    static void clearWorkspaces();
+
 private:
     struct Impl;
     std::shared_ptr<Impl> impl_;
