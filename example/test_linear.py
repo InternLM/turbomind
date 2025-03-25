@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from safetensors import safe_open
 
 import turbomind as tm
 from turbomind.utils import unpack_awq_gemm
@@ -69,24 +68,6 @@ def dequantize(qweight, qzeros, scales, group_size: int = 128):
     return _qweight.half()
 
 
-def load_specified_linear_weights():
-    ckpt_path = '/models/140/llama3/Meta-Llama-3-8B-Instruct-hf-AWQ/model-00001-of-00002.safetensors'  # noqa
-    layer_id = 0
-    # prefix = f'model.layers.{layer_id}.self_attn.q_proj.'
-    prefix = f'model.layers.{layer_id}.self_attn.o_proj.'
-    keys = ['qweight', 'qzeros', 'scales']
-    tensors = {}
-    with safe_open(ckpt_path, framework='pt', device='cuda') as f:
-        for key in keys:
-            tensors[key] = f.get_tensor(prefix + key)
-
-    return tensors['qweight'], tensors['qzeros'], tensors['scales']
-
-
-# qweight, qzeros, scales = load_specified_linear_weights()
-# in_features = qweight.shape[0]
-# out_features = qweight.shape[1] * 8
-
 group_size = 128
 batch_size = 16384
 in_features = 16384
@@ -135,3 +116,5 @@ outliers = torch.sum(outliers) / outliers.shape[0]
 print(f'abs_diff {abs_diff:4f}, '
       f'rel_diff {rel_diff:4f}, '
       f'outliers {outliers:4f}')
+
+tm.Linear.clear_workspaces()

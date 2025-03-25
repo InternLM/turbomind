@@ -188,3 +188,7 @@ class Linear(torch.nn.Module):
 
     def to_half(x: torch.Tensor):
         return x.to(torch.half)
+
+    @classmethod
+    def clear_workspaces(cls):
+        return _turbomind_ext.Linear.clear_workspaces()

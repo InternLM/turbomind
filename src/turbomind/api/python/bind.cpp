@@ -337,10 +337,12 @@ PYBIND11_MODULE(_turbomind_ext, m)
                  auto _qzeros  = TorchTensorToTurbomindTensor(qzeros);
                  self->post_init(_qweight, *_scales, *_qzeros, simt);
              })
-        .def("forward", [](turbomind::Linear* self, py::object in, py::object out, int64_t stream_id = 0) {
-            auto _in    = TorchTensorToTurbomindTensor(in);
-            auto _out   = TorchTensorToTurbomindTensor(out);
-            auto stream = reinterpret_cast<cudaStream_t>(stream_id);
-            return self->forward(*_in, *_out, stream);
-        });
+        .def("forward",
+             [](turbomind::Linear* self, py::object in, py::object out, int64_t stream_id = 0) {
+                 auto _in    = TorchTensorToTurbomindTensor(in);
+                 auto _out   = TorchTensorToTurbomindTensor(out);
+                 auto stream = reinterpret_cast<cudaStream_t>(stream_id);
+                 return self->forward(*_in, *_out, stream);
+             })
+        .def_static("clear_workspaces", &turbomind::Linear::clearWorkspaces);
 }

@@ -10,8 +10,28 @@
 #include <cuda_runtime.h>
 #include <fstream>
 #include <iostream>
+#include <mutex>
+#include <unordered_map>
 
 namespace turbomind {
+
+struct TupleHash {
+    size_t operator()(const std::tuple<int, cudaStream_t>& key) const
+    {
+        size_t seed = 0;
+        hash_combine(seed, std::get<0>(key));
+        hash_combine(seed, reinterpret_cast<void*>(std::get<1>(key)));
+        return seed;
+    }
+
+private:
+    template<typename T>
+    void hash_combine(size_t& seed, const T& v) const
+    {
+        std::hash<T> hasher;
+        seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    }
+};
 
 class GemmPool {
 public:
@@ -43,20 +63,10 @@ struct Linear::Impl {
     Impl(size_t input_dims, size_t output_dims, int w_bit, int group_size):
         input_dims_(input_dims), output_dims_(output_dims), w_bit_(w_bit), group_size_(group_size)
     {
-        workspace_ = {};
-
-        workspace_.barriers_size = gemm::Gemm::kBarriersSize;
-        workspace_.partials_size = gemm::Gemm::kPartialsSize;
-        cudaMallocAsync(&workspace_.barriers, workspace_.barriers_size, 0);
-        cudaMallocAsync(&workspace_.partials, workspace_.partials_size, 0);
-        cudaMemsetAsync(workspace_.barriers, 0, workspace_.barriers_size, 0);
     }
 
     ~Impl()
     {
-        cudaFreeAsync(workspace_.barriers, 0);
-        cudaFreeAsync(workspace_.partials, 0);
-        workspace_ = {};
         check_cuda_error(cudaFree(scales_zeros_));
     }
 
@@ -114,7 +124,7 @@ struct Linear::Impl {
                             c_desc,
                             const_cast<void*>(out.data),
                             c_desc,
-                            workspace_,
+                            getWorkspace(device_id, stream),
                             stream);
 
         if (ec) {
@@ -273,9 +283,50 @@ struct Linear::Impl {
         }
     }
 
+    static void clearWorkspaces()
+    {
+        workspace_cache_.clear();
+    }
+
 private:
+    static gemm::Workspace& getWorkspace(int device_id, cudaStream_t stream)
+    {
+        std::lock_guard<std::mutex> lock(cache_mutex_);
+
+        auto key = std::make_tuple(device_id, stream);
+        auto it  = workspace_cache_.find(key);
+        if (it != workspace_cache_.end()) {
+            return *it->second;
+        }
+
+        // create a new workspace if cache missed
+        auto workspace = std::shared_ptr<gemm::Workspace>(new gemm::Workspace, [device_id](gemm::Workspace* p) {
+            int old{};
+            check_cuda_error(cudaGetDevice(&old));
+            check_cuda_error(cudaSetDevice(device_id));
+            check_cuda_error(cudaFree(p->barriers));
+            check_cuda_error(cudaFree(p->partials));
+            check_cuda_error(cudaSetDevice(old));
+        });
+
+        workspace->barriers_size = gemm::Gemm::kBarriersSize;
+        workspace->partials_size = gemm::Gemm::kPartialsSize;
+        check_cuda_error(cudaMallocAsync(&workspace->barriers, workspace->barriers_size, stream));
+        check_cuda_error(cudaMallocAsync(&workspace->partials, workspace->partials_size, stream));
+        check_cuda_error(cudaMemsetAsync(workspace->barriers, 0, workspace->barriers_size, stream));
+
+        workspace_cache_[key] = workspace;
+        return *workspace;
+    }
+
+private:
+    // A global workspace cache to avoid creating workspace for every Linear::Impl instance
+    // The key refers to a pair of <device_id, cudaStream_t>
+    static std::unordered_map<std::tuple<int, cudaStream_t>, std::shared_ptr<gemm::Workspace>, TupleHash>
+                      workspace_cache_;
+    static std::mutex cache_mutex_;
+
     gemm::DispatchPolicy dispatch_policy_{gemm::DispatchPolicy::kDefault};
-    gemm::Workspace      workspace_;
 
     size_t input_dims_;
     size_t output_dims_;
@@ -288,6 +339,10 @@ private:
     gemm::MatrixLayout k_desc_;
     gemm::MatrixLayout q_desc_;
 };
+
+std::unordered_map<std::tuple<int, cudaStream_t>, std::shared_ptr<gemm::Workspace>, TupleHash>
+           Linear::Impl::workspace_cache_;
+std::mutex Linear::Impl::cache_mutex_;
 
 Linear::Linear(size_t input_dims, size_t output_dims, int w_bit, int group_size)
 {
@@ -303,4 +358,10 @@ void Linear::forward(const Tensor& in, Tensor& out, cudaStream_t stream)
 {
     impl_->forward(in, out, stream);
 }
+
+void Linear::clearWorkspaces()
+{
+    Linear::Impl::clearWorkspaces();
+}
+
 }  // namespace turbomind
