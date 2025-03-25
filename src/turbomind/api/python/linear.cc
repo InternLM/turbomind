@@ -283,7 +283,8 @@ struct Linear::Impl {
         }
     }
 
-    static void clearWorkspaces() {
+    static void clearWorkspaces()
+    {
         workspace_cache_.clear();
     }
 
@@ -358,7 +359,8 @@ void Linear::forward(const Tensor& in, Tensor& out, cudaStream_t stream)
     impl_->forward(in, out, stream);
 }
 
-void Linear::clearWorkspaces() {
+void Linear::clearWorkspaces()
+{
     Linear::Impl::clearWorkspaces();
 }
 
